@@ -1,0 +1,12 @@
+# Generated output
+sessions/
+index.json
+
+# User config
+config.json
+
+# Cache
+.state.json
+
+# macOS
+.DS_Store
