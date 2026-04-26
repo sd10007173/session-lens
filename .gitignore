@@ -8,5 +8,9 @@ config.json
 # Cache
 .state.json
 
+# Python
+__pycache__/
+*.pyc
+
 # macOS
 .DS_Store
