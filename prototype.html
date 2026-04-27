@@ -30,10 +30,10 @@
   tbody tr:last-child td { border-bottom: none; }
 
   .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-  .badge-套利 { background: #fef3e0; color: #e67e00; }
-  .badge-CoinKarma { background: #e8f0fe; color: #1a73e8; }
-  .badge-夕煇 { background: #f3e8fe; color: #7c3aed; }
-  .badge-其他 { background: #f0f0f0; color: #666; }
+  .badge-Work { background: #e8f0fe; color: #1a73e8; }
+  .badge-Side-Project { background: #fef3e0; color: #e67e00; }
+  .badge-Learning { background: #e6f4ea; color: #1e8e3e; }
+  .badge-Other { background: #f0f0f0; color: #666; }
 
   .first-msg { max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .date-col { white-space: nowrap; color: #666; }
@@ -73,10 +73,10 @@
     <label>分類</label>
     <select id="categoryFilter">
       <option value="">全部</option>
-      <option value="套利">套利</option>
-      <option value="CoinKarma">CoinKarma</option>
-      <option value="夕煇">夕煇</option>
-      <option value="其他">其他</option>
+      <option value="Work">Work</option>
+      <option value="Side Project">Side Project</option>
+      <option value="Learning">Learning</option>
+      <option value="Other">Other</option>
     </select>
   </div>
   <div class="filter-group">
@@ -106,37 +106,35 @@
 </table>
 
 <script>
-const CATEGORY_LABELS = { '套利': '套利', 'CoinKarma': 'CoinKarma', '夕煇': '夕煇', '其他': '其他' };
-const CATEGORY_CLASSES = { '套利': 'badge-套利', 'CoinKarma': 'badge-CoinKarma', '夕煇': 'badge-夕煇', '其他': 'badge-其他' };
+const CATEGORY_LABELS = { 'Work': 'Work', 'Side Project': 'Side Project', 'Learning': 'Learning', 'Other': 'Other' };
+const CATEGORY_CLASSES = { 'Work': 'badge-Work', 'Side Project': 'badge-Side-Project', 'Learning': 'badge-Learning', 'Other': 'badge-Other' };
 
 // --- Mock data (will be replaced by index.json) ---
 const MOCK_DATA = [
-  { session_id: "6fe9aea5-a9e3-4c27-a7a8-55964102b5b4", project: "CoinKarma/service", category: "work", started_at: "2026-04-25 14:30", last_active: "2026-04-25 16:20", first_message: "BEN-1053 幫我看一下這張單，我們要想辦法來開發。請你先嘗試用 300 字的內容解讀一下這張單的需求是什麼", message_count: 24, filtered_size_kb: 48 },
-  { session_id: "365d0042-6fce-4253-adc3-2cff4bf6520f", project: "Arbitrage01/7", category: "arbitrage", started_at: "2026-04-25 10:15", last_active: "2026-04-25 13:45", first_message: "幫我檢查一下目前套利機器人的狀態，看看有沒有卡住的訂單", message_count: 67, filtered_size_kb: 120 },
-  { session_id: "f26c8485-e718-4002-bafa-5c234536e544", project: "arbitrage-auto-transfer", category: "arbitrage", started_at: "2026-04-25 09:00", last_active: "2026-04-25 11:30", first_message: "USDT 自動轉帳的邏輯需要修改，現在跨所轉帳有時候會失敗", message_count: 45, filtered_size_kb: 85 },
-  { session_id: "8a7933f5-000d-4c7c-b4c6-5c2620e4267b", project: "xihue/manage", category: "work", started_at: "2026-04-24 16:00", last_active: "2026-04-24 18:30", first_message: "後台管理系統的報表頁面需要加一個新的篩選條件", message_count: 31, filtered_size_kb: 55 },
-  { session_id: "ab9e0df6-2d24-4ea6-8fd1-56b7e492f0ba", project: "xihue/lotto-service", category: "work", started_at: "2026-04-24 14:00", last_active: "2026-04-24 15:45", first_message: "開獎結果同步的 cron job 有時候會漏掉，幫我查一下原因", message_count: 28, filtered_size_kb: 42 },
-  { session_id: "982ce12a-368a-4898-bca5-8e9dd2834de6", project: "personal/health", category: "life", started_at: "2026-04-24 09:00", last_active: "2026-04-24 09:30", first_message: "幫我整理一下最近的健康檢查報告，標出需要注意的數值", message_count: 8, filtered_size_kb: 12 },
-  { session_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", project: "llm-wiki", category: "life", started_at: "2026-04-23 20:00", last_active: "2026-04-23 21:15", first_message: "幫我更新 wiki 裡面關於套利專案的頁面，加上最近的進展", message_count: 15, filtered_size_kb: 22 },
-  { session_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901", project: "Arbitrage01/7", category: "arbitrage", started_at: "2026-04-23 15:30", last_active: "2026-04-23 18:00", first_message: "新的交易所 API 接進來了，需要測試一下價差計算邏輯", message_count: 52, filtered_size_kb: 95 },
-  { session_id: "c3d4e5f6-a7b8-9012-cdef-123456789012", project: "CoinKarma/service", category: "work", started_at: "2026-04-23 10:00", last_active: "2026-04-23 12:30", first_message: "用戶回報 K 線圖載入很慢，幫我看一下效能問題在哪", message_count: 35, filtered_size_kb: 60 },
-  { session_id: "d4e5f6a7-b8c9-0123-defa-234567890123", project: "Arbitrage01/7", category: "arbitrage", started_at: "2026-04-22 14:00", last_active: "2026-04-22 17:30", first_message: "風控模組的止損邏輯需要調整，目前的閾值太敏感了", message_count: 41, filtered_size_kb: 78 },
-  { session_id: "e5f6a7b8-c9d0-1234-efab-345678901234", project: "xihue/service", category: "work", started_at: "2026-04-22 09:30", last_active: "2026-04-22 11:00", first_message: "API 的 rate limiting 要改成 per-user 而不是 global", message_count: 19, filtered_size_kb: 30 },
-  { session_id: "f6a7b8c9-d0e1-2345-fabc-456789012345", project: "home", category: "life", started_at: "2026-04-21 21:00", last_active: "2026-04-21 22:00", first_message: "幫我規劃一下下週的行程，週三有牙醫、週五有聚餐", message_count: 6, filtered_size_kb: 8 },
+  { session_id: "a1b2c3d4-0001-4000-a000-000000000001", project: "acme-app/backend", category: "Work", started_at: "2026-04-25 14:30", last_active: "2026-04-25 16:20", first_message: "Help me add pagination to the /api/users endpoint", message_count: 24, filtered_size_kb: 48 },
+  { session_id: "a1b2c3d4-0002-4000-a000-000000000002", project: "acme-app/frontend", category: "Work", started_at: "2026-04-25 10:15", last_active: "2026-04-25 13:45", first_message: "The dashboard chart is rendering slowly, let's optimize it", message_count: 35, filtered_size_kb: 60 },
+  { session_id: "a1b2c3d4-0003-4000-a000-000000000003", project: "my-side-project", category: "Side Project", started_at: "2026-04-25 09:00", last_active: "2026-04-25 11:30", first_message: "Add dark mode support to the landing page", message_count: 45, filtered_size_kb: 85 },
+  { session_id: "a1b2c3d4-0004-4000-a000-000000000004", project: "acme-app/backend", category: "Work", started_at: "2026-04-24 16:00", last_active: "2026-04-24 18:30", first_message: "The cron job for daily reports sometimes misses entries", message_count: 31, filtered_size_kb: 55 },
+  { session_id: "a1b2c3d4-0005-4000-a000-000000000005", project: "rust-tutorial", category: "Learning", started_at: "2026-04-24 14:00", last_active: "2026-04-24 15:45", first_message: "Explain ownership and borrowing in Rust with examples", message_count: 28, filtered_size_kb: 42 },
+  { session_id: "a1b2c3d4-0006-4000-a000-000000000006", project: "home", category: "Other", started_at: "2026-04-24 09:00", last_active: "2026-04-24 09:30", first_message: "Help me write a meal plan for next week", message_count: 8, filtered_size_kb: 12 },
+  { session_id: "a1b2c3d4-0007-4000-a000-000000000007", project: "my-side-project", category: "Side Project", started_at: "2026-04-23 20:00", last_active: "2026-04-23 21:15", first_message: "Set up CI/CD pipeline with GitHub Actions", message_count: 15, filtered_size_kb: 22 },
+  { session_id: "a1b2c3d4-0008-4000-a000-000000000008", project: "acme-app/backend", category: "Work", started_at: "2026-04-23 10:00", last_active: "2026-04-23 12:30", first_message: "Refactor the auth middleware to support OAuth2", message_count: 52, filtered_size_kb: 95 },
+  { session_id: "a1b2c3d4-0009-4000-a000-000000000009", project: "ml-course", category: "Learning", started_at: "2026-04-22 14:00", last_active: "2026-04-22 17:30", first_message: "Walk me through building a simple neural network from scratch", message_count: 41, filtered_size_kb: 78 },
+  { session_id: "a1b2c3d4-0010-4000-a000-000000000010", project: "home", category: "Other", started_at: "2026-04-21 21:00", last_active: "2026-04-21 22:00", first_message: "Help me draft an email to my landlord about the lease renewal", message_count: 6, filtered_size_kb: 8 },
 ];
 
 const MOCK_DETAILS = {
-  "6fe9aea5-a9e3-4c27-a7a8-55964102b5b4": [
-    { role: "user", text: "BEN-1053 幫我看一下這張單，我們要想辦法來開發。\n\n請你先嘗試：\n1. 用 300 字的內容解讀一下這張單的需求是什麼\n2. 再用 300 字的內容解釋一下這張單要怎麼執行" },
-    { role: "assistant", text: "這張單要做的是在 CoinKarma 的幣種詳情頁加上「社群聲量指標」。目前詳情頁只有價格和基本面資料，產品希望加上 Twitter/Reddit 的提及次數趨勢圖，讓用戶能看到社群熱度的變化。\n\n資料來源是現有的 social-metrics 微服務，已經在每小時抓取數據了，但還沒有前端呈現。\n\n執行上建議分兩步：先加 API endpoint 把 social-metrics 的資料暴露出來，再在前端幣種詳情頁加一個新的 tab 放趨勢圖。" },
-    { role: "user", text: "好，那我們先做 API 的部分" },
-    { role: "assistant", text: "在 `routes/coin.py` 加了 `/api/v1/coins/{coin_id}/social-metrics` endpoint，支援 `period` 參數（7d/30d/90d），回傳每小時的 Twitter 提及數和 Reddit 貼文數。\n\n已經寫好測試，跑過了。" },
+  "a1b2c3d4-0001-4000-a000-000000000001": [
+    { role: "user", text: "Help me add pagination to the /api/users endpoint" },
+    { role: "assistant", text: "Added offset/limit pagination to the /api/users endpoint. The default page size is 20, max 100.\n\nAlso added Link headers for next/prev pages following RFC 5988." },
+    { role: "user", text: "Can you also add cursor-based pagination as an alternative?" },
+    { role: "assistant", text: "Done. The endpoint now supports both modes:\n- `?offset=20&limit=10` for offset pagination\n- `?cursor=abc123&limit=10` for cursor pagination\n\nCursor is based on the user's created_at timestamp + id for stable ordering." },
   ],
-  "365d0042-6fce-4253-adc3-2cff4bf6520f": [
-    { role: "user", text: "幫我檢查一下目前套利機器人的狀態，看看有沒有卡住的訂單" },
-    { role: "assistant", text: "檢查了所有活躍的交易對，發現 BTC/USDT 在 Exchange A → Exchange B 的方向有一筆訂單卡了 47 分鐘，原因是 Exchange B 的提幣 API 回傳 timeout 但沒有正確重試。\n\n另外 ETH/USDT 的價差在過去一小時內持續為負，建議暫時關閉這個方向。" },
-    { role: "user", text: "那個卡住的訂單幫我手動處理掉，然後修一下重試邏輯" },
-    { role: "assistant", text: "已處理：\n1. 手動取消了卡住的 BTC/USDT 訂單\n2. 在提幣邏輯加了指數退避重試（最多 3 次，間隔 5s/15s/45s）\n3. 超過 3 次重試就標記為 failed 並發通知" },
+  "a1b2c3d4-0003-4000-a000-000000000003": [
+    { role: "user", text: "Add dark mode support to the landing page" },
+    { role: "assistant", text: "Added dark mode with CSS custom properties. It respects the user's system preference via `prefers-color-scheme` and also has a manual toggle button in the header.\n\nColors are defined in :root and [data-theme='dark'] selectors." },
+    { role: "user", text: "The toggle button needs to persist the user's choice" },
+    { role: "assistant", text: "Updated the toggle to save the preference in localStorage. On page load it checks:\n1. localStorage value first\n2. Falls back to system preference\n\nThe button icon switches between sun/moon accordingly." },
   ]
 };
 

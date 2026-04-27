@@ -1,10 +1,10 @@
 {
   "claude_dir": "~/.claude",
   "categories": {
-    "套利": ["rbitrage", "Arbitrage"],
-    "CoinKarma": ["CoinKarma"],
-    "夕煇": ["xihue"]
+    "Work": ["my-company", "work-project"],
+    "Side Project": ["side-project", "hobby"],
+    "Learning": ["tutorial", "course"]
   },
-  "default_category": "其他",
+  "default_category": "Other",
   "port": 8919
 }
