@@ -157,10 +157,12 @@ def process_session(jsonl_path: Path) -> dict | None:
         first_ts = last_ts = datetime.fromtimestamp(mtime)
 
     first_user = next((t["text"] for t in turns if t["role"] == "user"), "")
+    last_user = next((t["text"] for t in reversed(turns) if t["role"] == "user"), "")
 
     return {
         "turns": turns,
         "first_message": first_user[:300],
+        "last_message": last_user[:300],
         "message_count": len(turns),
         "started_at": first_ts.strftime("%Y-%m-%d %H:%M"),
         "last_active": last_ts.strftime("%Y-%m-%d %H:%M"),
@@ -224,7 +226,7 @@ def run_digest(force: bool = False):
         state_key = str(jsonl_path)
 
         if state_key in state and state[state_key] == file_size:
-            if session_id in existing_index:
+            if session_id in existing_index and "last_message" in existing_index[session_id]:
                 index.append(existing_index[session_id])
                 skipped += 1
                 continue
@@ -253,6 +255,7 @@ def run_digest(force: bool = False):
             "started_at": result["started_at"],
             "last_active": result["last_active"],
             "first_message": result["first_message"],
+            "last_message": result["last_message"],
             "message_count": result["message_count"],
             "filtered_size_kb": round(detail_file.stat().st_size / 1024),
         }

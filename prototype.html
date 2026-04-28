@@ -35,7 +35,8 @@
   .badge-Learning { background: #e6f4ea; color: #1e8e3e; }
   .badge-Other { background: #f0f0f0; color: #666; }
 
-  .first-msg { max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .first-msg { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .last-msg { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #555; }
   .date-col { white-space: nowrap; color: #666; }
   .num-col { text-align: right; color: #888; font-variant-numeric: tabular-nums; }
 
@@ -51,7 +52,8 @@
   .detail-content code { background: #e8e8e8; padding: 2px 6px; border-radius: 3px; font-size: 12px; font-family: "SF Mono", Menlo, monospace; }
 
   .empty { text-align: center; padding: 40px; color: #999; font-size: 14px; }
-  .session-id { font-size: 11px; color: #aaa; font-family: "SF Mono", Menlo, monospace; }
+  .session-id { font-size: 11px; color: #aaa; font-family: "SF Mono", Menlo, monospace; white-space: nowrap; }
+  .id-col { font-family: "SF Mono", Menlo, monospace; font-size: 11px; color: #888; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -97,9 +99,11 @@
       <th>日期</th>
       <th>專案</th>
       <th>分類</th>
-      <th>第一條訊息</th>
+      <th>第一個提示詞</th>
+      <th>最後一個提示詞</th>
       <th style="text-align:right">訊息數</th>
       <th style="text-align:right">大小</th>
+      <th>Session ID</th>
     </tr>
   </thead>
   <tbody id="tbody"></tbody>
@@ -187,7 +191,10 @@ function filterSessions() {
     if (f.dateTo && d > f.dateTo) return false;
     if (f.category && s.category !== f.category) return false;
     if (f.project && s.project !== f.project) return false;
-    if (f.search && !s.first_message.toLowerCase().includes(f.search)) return false;
+    if (f.search) {
+      const haystack = (s.first_message + ' ' + (s.last_message || '')).toLowerCase();
+      if (!haystack.includes(f.search)) return false;
+    }
     return true;
   });
 }
@@ -205,23 +212,27 @@ function render() {
   `;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">沒有符合條件的 session</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">沒有符合條件的 session</td></tr>';
     return;
   }
 
   let html = '';
   filtered.forEach(s => {
     const isExpanded = expandedId === s.session_id;
+    const lastMsg = s.last_message || '';
+    const idShort = s.session_id.slice(0, 8);
     html += `<tr class="${isExpanded ? 'expanded' : ''}" onclick="toggleDetail('${s.session_id}')">
       <td class="date-col">${s.started_at.slice(0, 16)}</td>
       <td>${s.project}</td>
       <td><span class="badge ${CATEGORY_CLASSES[s.category] || ''}">${CATEGORY_LABELS[s.category] || s.category}</span></td>
       <td class="first-msg" title="${escHtml(s.first_message)}">${escHtml(s.first_message)}</td>
+      <td class="last-msg" title="${escHtml(lastMsg)}">${escHtml(lastMsg)}</td>
       <td class="num-col">${s.message_count}</td>
       <td class="num-col">${s.filtered_size_kb} KB</td>
+      <td class="id-col" title="${escHtml(s.session_id)}">${idShort}</td>
     </tr>`;
     if (isExpanded) {
-      html += `<tr class="detail-row"><td colspan="6"><div class="detail-content" id="detail-${s.session_id}">載入中...</div></td></tr>`;
+      html += `<tr class="detail-row"><td colspan="8"><div class="detail-content" id="detail-${s.session_id}">載入中...</div></td></tr>`;
     }
   });
   tbody.innerHTML = html;
