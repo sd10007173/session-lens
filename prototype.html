@@ -30,10 +30,13 @@
   tbody tr:last-child td { border-bottom: none; }
 
   .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-  .badge-Work { background: #e8f0fe; color: #1a73e8; }
-  .badge-Side-Project { background: #fef3e0; color: #e67e00; }
-  .badge-Learning { background: #e6f4ea; color: #1e8e3e; }
-  .badge-Other { background: #f0f0f0; color: #666; }
+  .badge-c0 { background: #e8f0fe; color: #1a73e8; }
+  .badge-c1 { background: #fef3e0; color: #e67e00; }
+  .badge-c2 { background: #e6f4ea; color: #1e8e3e; }
+  .badge-c3 { background: #f3e8fd; color: #8b3eba; }
+  .badge-c4 { background: #fde8f0; color: #c4366f; }
+  .badge-c5 { background: #e0f3f7; color: #00789c; }
+  .badge-default { background: #f0f0f0; color: #666; }
 
   .first-msg { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .last-msg { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #555; }
@@ -75,10 +78,6 @@
     <label>分類</label>
     <select id="categoryFilter">
       <option value="">全部</option>
-      <option value="Work">Work</option>
-      <option value="Side Project">Side Project</option>
-      <option value="Learning">Learning</option>
-      <option value="Other">Other</option>
     </select>
   </div>
   <div class="filter-group">
@@ -110,8 +109,14 @@
 </table>
 
 <script>
-const CATEGORY_LABELS = { 'Work': 'Work', 'Side Project': 'Side Project', 'Learning': 'Learning', 'Other': 'Other' };
-const CATEGORY_CLASSES = { 'Work': 'badge-Work', 'Side Project': 'badge-Side-Project', 'Learning': 'badge-Learning', 'Other': 'badge-Other' };
+const BADGE_PALETTE = ['badge-c0', 'badge-c1', 'badge-c2', 'badge-c3', 'badge-c4', 'badge-c5'];
+const DEFAULT_CATEGORY_NAMES = new Set(['其他', '其它', 'Other', 'Others']);
+function categoryClass(cat) {
+  if (!cat || DEFAULT_CATEGORY_NAMES.has(cat)) return 'badge-default';
+  let h = 0;
+  for (let i = 0; i < cat.length; i++) h = (h * 31 + cat.charCodeAt(i)) | 0;
+  return BADGE_PALETTE[Math.abs(h) % BADGE_PALETTE.length];
+}
 
 // --- Mock data (will be replaced by index.json) ---
 const MOCK_DATA = [
@@ -157,8 +162,21 @@ async function loadData() {
   } catch {
     sessions = MOCK_DATA;
   }
+  populateCategoryFilter();
   populateProjectFilter();
   render();
+}
+
+function populateCategoryFilter() {
+  const cats = [...new Set(sessions.map(s => s.category))].sort();
+  const sel = document.getElementById('categoryFilter');
+  sel.innerHTML = '<option value="">全部</option>';
+  cats.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    sel.appendChild(opt);
+  });
 }
 
 function populateProjectFilter() {
@@ -224,7 +242,7 @@ function render() {
     html += `<tr class="${isExpanded ? 'expanded' : ''}" onclick="toggleDetail('${s.session_id}')">
       <td class="date-col">${s.started_at.slice(0, 16)}</td>
       <td>${s.project}</td>
-      <td><span class="badge ${CATEGORY_CLASSES[s.category] || ''}">${CATEGORY_LABELS[s.category] || s.category}</span></td>
+      <td><span class="badge ${categoryClass(s.category)}">${escHtml(s.category)}</span></td>
       <td class="first-msg" title="${escHtml(s.first_message)}">${escHtml(s.first_message)}</td>
       <td class="last-msg" title="${escHtml(lastMsg)}">${escHtml(lastMsg)}</td>
       <td class="num-col">${s.message_count}</td>
