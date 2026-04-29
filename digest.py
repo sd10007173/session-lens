@@ -9,6 +9,7 @@ session-lens digest: 從 Claude Code session JSONL 中提取有用的對話內�
 """
 
 import argparse
+import base64
 import http.server
 import json
 import os
@@ -91,6 +92,22 @@ def extract_user_text(message: dict) -> str | None:
     return None
 
 
+def extract_user_images(message: dict) -> list[dict]:
+    content = message.get("content")
+    if not isinstance(content, list):
+        return []
+    out = []
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "image":
+            src = block.get("source", {})
+            if isinstance(src, dict) and src.get("type") == "base64":
+                out.append({
+                    "data": src.get("data", ""),
+                    "media_type": src.get("media_type", "image/png"),
+                })
+    return out
+
+
 def extract_assistant_text(message: dict) -> str | None:
     content = message.get("content", [])
     if not isinstance(content, list):
@@ -117,10 +134,22 @@ def parse_timestamp(ts) -> datetime | None:
         return None
 
 
+IMAGE_EXT_MAP = {"image/jpeg": "jpg", "image/png": "png", "image/gif": "gif", "image/webp": "webp"}
+
+
 def process_session(jsonl_path: Path) -> dict | None:
     turns = []
     first_ts = None
     last_ts = None
+    session_id = jsonl_path.stem
+    image_dir = OUTPUT_DIR / "sessions" / "images" / session_id
+    img_counter = 0
+    has_images = False
+
+    if image_dir.exists():
+        for old in image_dir.iterdir():
+            if old.is_file():
+                old.unlink()
 
     with open(jsonl_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -141,9 +170,27 @@ def process_session(jsonl_path: Path) -> dict | None:
 
             msg_type = obj.get("type", "")
             if msg_type == "user":
-                text = extract_user_text(obj.get("message", {}))
-                if text:
-                    turns.append({"role": "user", "text": text})
+                msg = obj.get("message", {})
+                text = extract_user_text(msg)
+                images = extract_user_images(msg)
+                saved = []
+                for img in images:
+                    ext = IMAGE_EXT_MAP.get(img["media_type"], "png")
+                    img_counter += 1
+                    fname = f"{img_counter}.{ext}"
+                    image_dir.mkdir(parents=True, exist_ok=True)
+                    try:
+                        with open(image_dir / fname, "wb") as imgf:
+                            imgf.write(base64.b64decode(img["data"]))
+                        saved.append(fname)
+                    except Exception:
+                        pass
+                if text or saved:
+                    turn = {"role": "user", "text": text or ""}
+                    if saved:
+                        turn["images"] = saved
+                        has_images = True
+                    turns.append(turn)
             elif msg_type == "assistant":
                 text = extract_assistant_text(obj.get("message", {}))
                 if text:
@@ -166,6 +213,7 @@ def process_session(jsonl_path: Path) -> dict | None:
         "message_count": len(turns),
         "started_at": first_ts.strftime("%Y-%m-%d %H:%M"),
         "last_active": last_ts.strftime("%Y-%m-%d %H:%M"),
+        "has_images": has_images,
     }
 
 
@@ -226,7 +274,7 @@ def run_digest(force: bool = False):
         state_key = str(jsonl_path)
 
         if state_key in state and state[state_key] == file_size:
-            if session_id in existing_index and "last_message" in existing_index[session_id]:
+            if session_id in existing_index and "has_images" in existing_index[session_id]:
                 index.append(existing_index[session_id])
                 skipped += 1
                 continue
@@ -258,6 +306,7 @@ def run_digest(force: bool = False):
             "last_message": result["last_message"],
             "message_count": result["message_count"],
             "filtered_size_kb": round(detail_file.stat().st_size / 1024),
+            "has_images": result["has_images"],
         }
         index.append(entry)
         state[state_key] = file_size

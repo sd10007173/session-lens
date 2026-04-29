@@ -23,6 +23,10 @@
 
   table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
   thead th { text-align: left; padding: 10px 14px; font-size: 12px; font-weight: 600; color: #666; background: #fafafa; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { background: #f0f0f0; }
+  .sort-arrow { font-size: 10px; color: #ccc; margin-left: 3px; }
+  .sort-arrow.active { color: #1a73e8; }
   tbody tr { cursor: pointer; transition: background 0.1s; }
   tbody tr:hover { background: #f7f9fc; }
   tbody tr.expanded { background: #f0f4fa; }
@@ -53,6 +57,12 @@
   .detail-content .turn-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
   .detail-content .resume-hint { margin-top: 12px; font-size: 12px; color: #888; }
   .detail-content code { background: #e8e8e8; padding: 2px 6px; border-radius: 3px; font-size: 12px; font-family: "SF Mono", Menlo, monospace; }
+  .turn-images { margin-top: 8px; }
+  .show-imgs-btn { font-size: 12px; padding: 4px 10px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; cursor: pointer; color: #444; }
+  .show-imgs-btn:hover { background: #f0f0f0; }
+  .turn-img { max-width: 100%; max-height: 400px; border-radius: 6px; margin-top: 8px; display: block; border: 1px solid #e0e0e0; cursor: zoom-in; }
+  .lightbox-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+  .lightbox-overlay img { max-width: 95vw; max-height: 95vh; object-fit: contain; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
 
   .empty { text-align: center; padding: 40px; color: #999; font-size: 14px; }
   .session-id { font-size: 11px; color: #aaa; font-family: "SF Mono", Menlo, monospace; white-space: nowrap; }
@@ -95,7 +105,8 @@
 <table>
   <thead>
     <tr>
-      <th>日期</th>
+      <th class="sortable" onclick="setSort('started_at')">開始 <span class="sort-arrow" id="arrow-started_at">▼</span></th>
+      <th class="sortable" onclick="setSort('last_active')">最後活動 <span class="sort-arrow" id="arrow-last_active"></span></th>
       <th>專案</th>
       <th>分類</th>
       <th>第一個提示詞</th>
@@ -150,6 +161,18 @@ const MOCK_DETAILS = {
 // --- App state ---
 let sessions = [];
 let expandedId = null;
+let sortKey = 'started_at';
+let sortDir = 'desc';
+
+function setSort(key) {
+  if (sortKey === key) {
+    sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    sortKey = key;
+    sortDir = 'desc';
+  }
+  render();
+}
 
 async function loadData() {
   try {
@@ -219,6 +242,22 @@ function filterSessions() {
 
 function render() {
   const filtered = filterSessions();
+  filtered.sort((a, b) => {
+    const va = a[sortKey] || '';
+    const vb = b[sortKey] || '';
+    return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+  });
+  ['started_at', 'last_active'].forEach(k => {
+    const el = document.getElementById('arrow-' + k);
+    if (!el) return;
+    if (k === sortKey) {
+      el.textContent = sortDir === 'desc' ? '▼' : '▲';
+      el.classList.add('active');
+    } else {
+      el.textContent = '';
+      el.classList.remove('active');
+    }
+  });
   const tbody = document.getElementById('tbody');
 
   // Stats
@@ -230,7 +269,7 @@ function render() {
   `;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty">沒有符合條件的 session</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">沒有符合條件的 session</td></tr>';
     return;
   }
 
@@ -239,8 +278,10 @@ function render() {
     const isExpanded = expandedId === s.session_id;
     const lastMsg = s.last_message || '';
     const idShort = s.session_id.slice(0, 8);
+    const lastActive = (s.last_active || '').slice(0, 16);
     html += `<tr class="${isExpanded ? 'expanded' : ''}" onclick="toggleDetail('${s.session_id}')">
       <td class="date-col">${s.started_at.slice(0, 16)}</td>
+      <td class="date-col">${lastActive}</td>
       <td>${s.project}</td>
       <td><span class="badge ${categoryClass(s.category)}">${escHtml(s.category)}</span></td>
       <td class="first-msg" title="${escHtml(s.first_message)}">${escHtml(s.first_message)}</td>
@@ -250,7 +291,7 @@ function render() {
       <td class="id-col" title="${escHtml(s.session_id)}">${idShort}</td>
     </tr>`;
     if (isExpanded) {
-      html += `<tr class="detail-row"><td colspan="8"><div class="detail-content" id="detail-${s.session_id}">載入中...</div></td></tr>`;
+      html += `<tr class="detail-row"><td colspan="9"><div class="detail-content" id="detail-${s.session_id}">載入中...</div></td></tr>`;
     }
   });
   tbody.innerHTML = html;
@@ -283,17 +324,53 @@ async function loadDetail(id) {
     return;
   }
 
-  let html = turns.map(t => `
-    <div class="turn">
-      <div class="turn-label">${t.role === 'user' ? '👤 我' : '🤖 Claude'}</div>
-      <div class="${t.role === 'user' ? 'turn-user' : 'turn-assistant'}">
-        <div class="turn-text">${escHtml(t.text)}</div>
+  window.__sessionImages = window.__sessionImages || {};
+  let html = turns.map((t, i) => {
+    let imgHtml = '';
+    if (t.images && t.images.length > 0) {
+      const srcs = t.images.map(f => `./sessions/images/${id}/${f}`);
+      const key = `imgs-${id}-${i}`;
+      window.__sessionImages[key] = srcs;
+      imgHtml = `<div class="turn-images" id="${key}">
+        <button class="show-imgs-btn" onclick="event.stopPropagation(); revealImages('${key}')">顯示 ${t.images.length} 張圖片</button>
+      </div>`;
+    }
+    return `
+      <div class="turn">
+        <div class="turn-label">${t.role === 'user' ? '👤 我' : '🤖 Claude'}</div>
+        <div class="${t.role === 'user' ? 'turn-user' : 'turn-assistant'}">
+          <div class="turn-text">${escHtml(t.text)}</div>
+          ${imgHtml}
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   html += `<div class="resume-hint">Resume 指令：<code>claude --resume ${id}</code></div>`;
   container.innerHTML = html;
+}
+
+function revealImages(key) {
+  const container = document.getElementById(key);
+  if (!container) return;
+  const srcs = (window.__sessionImages || {})[key] || [];
+  container.innerHTML = srcs.map(s => `<img src="${s}" class="turn-img" alt="" onclick="event.stopPropagation(); openLightbox(this.src)">`).join('');
+}
+
+function openLightbox(src) {
+  const overlay = document.createElement('div');
+  overlay.className = 'lightbox-overlay';
+  const img = document.createElement('img');
+  img.src = src;
+  overlay.appendChild(img);
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', escHandler);
+  };
+  const escHandler = (e) => { if (e.key === 'Escape') close(); };
+  overlay.onclick = close;
+  document.addEventListener('keydown', escHandler);
+  document.body.appendChild(overlay);
 }
 
 function resetFilters() {
