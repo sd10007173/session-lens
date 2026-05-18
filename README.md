@@ -1,6 +1,6 @@
 # Session Lens
 
-從 Claude Code 的 session 資料中提取有用的對話內容。過濾掉約 97% 的雜訊（系統提示、工具呼叫、思考區塊等），只保留用戶訊息和助手回覆。
+從 Claude Code / Codex 的 session 資料中提取有用的對話內容。過濾掉約 97% 的雜訊（系統提示、工具呼叫、思考區塊等），只保留用戶訊息和助手回覆。
 
 附帶一個網頁介面，可以瀏覽、篩選、展開查看所有 session。
 
@@ -23,6 +23,7 @@ python3 digest.py --serve
 ```json
 {
   "claude_dir": "~/.claude",
+  "codex_dir": "~/.codex",
   "categories": {
     "工作": ["my-company", "work-project"],
     "Side Project": ["side-project"],
@@ -36,6 +37,7 @@ python3 digest.py --serve
 | 欄位 | 說明 |
 |------|------|
 | `claude_dir` | Claude Code 的資料目錄，預設 `~/.claude` |
+| `codex_dir` | Codex 的資料目錄，預設 `~/.codex`。設成 `null` 可關閉 Codex session 掃描 |
 | `categories` | 分類規則。key 是分類名稱，value 是專案路徑中要比對的關鍵字列表 |
 | `default_category` | 不符合任何規則時的預設分類 |
 | `port` | 網頁介面的 HTTP server port |
@@ -58,7 +60,7 @@ python3 digest.py --port 3000  # 指定 port
 | 檔案 | 說明 |
 |------|------|
 | `index.json` | 所有 session 的索引 |
-| `sessions/*.json` | 每個 session 過濾後的對話內容 |
+| `sessions/*.json` | 每個 session 過濾後的對話內容。Claude session 使用原始 UUID；Codex session 使用 `codex-<uuid>` |
 | `.state.json` | 增量處理的快取狀態 |
 
 ## 搭配 Claude Code 使用

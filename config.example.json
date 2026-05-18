@@ -1,5 +1,6 @@
 {
   "claude_dir": "~/.claude",
+  "codex_dir": "~/.codex",
   "categories": {
     "Work": ["my-company", "work-project"],
     "Side Project": ["side-project", "hobby"],

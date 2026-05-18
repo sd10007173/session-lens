@@ -309,6 +309,8 @@ async function loadDetail(id) {
   if (!container) return;
 
   let turns = null;
+  const session = sessions.find(s => s.session_id === id) || {};
+  const agentName = session.source === 'codex' ? 'Codex' : 'Claude';
 
   // Try loading from file first
   try {
@@ -337,7 +339,7 @@ async function loadDetail(id) {
     }
     return `
       <div class="turn">
-        <div class="turn-label">${t.role === 'user' ? '👤 我' : '🤖 Claude'}</div>
+        <div class="turn-label">${t.role === 'user' ? '👤 我' : '🤖 ' + agentName}</div>
         <div class="${t.role === 'user' ? 'turn-user' : 'turn-assistant'}">
           <div class="turn-text">${escHtml(t.text)}</div>
           ${imgHtml}
@@ -346,7 +348,10 @@ async function loadDetail(id) {
     `;
   }).join('');
 
-  html += `<div class="resume-hint">Resume 指令：<code>claude --resume ${id}</code></div>`;
+  const resumeCommand = session.source === 'codex'
+    ? `codex resume ${id.replace(/^codex-/, '')}`
+    : `claude --resume ${id}`;
+  html += `<div class="resume-hint">Resume 指令：<code>${resumeCommand}</code></div>`;
   container.innerHTML = html;
 }
 

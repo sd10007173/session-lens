@@ -40,6 +40,13 @@ def get_paths(config: dict) -> tuple[Path, Path]:
     return claude_dir, projects_dir
 
 
+def get_codex_sessions_dir(config: dict) -> Path | None:
+    codex_dir = config.get("codex_dir", "~/.codex")
+    if codex_dir is None or codex_dir is False:
+        return None
+    return Path(os.path.expanduser(codex_dir)) / "sessions"
+
+
 def build_category_rules(config: dict) -> list[tuple[str, str]]:
     rules = []
     for category, patterns in config.get("categories", {}).items():
@@ -66,6 +73,17 @@ def decode_project_path(dirname: str) -> str:
         parts = rest.lstrip("-").split("-")
         return "~/" + "/".join(parts)
     return dirname.replace("-", "/")
+
+
+def display_path(path: str | None) -> str:
+    if not path:
+        return "?"
+    home = str(Path.home())
+    if path == home:
+        return "~"
+    if path.startswith(home + "/"):
+        return "~/" + path[len(home) + 1 :]
+    return path
 
 
 def strip_system_reminders(text: str) -> str:
@@ -137,7 +155,7 @@ def parse_timestamp(ts) -> datetime | None:
 IMAGE_EXT_MAP = {"image/jpeg": "jpg", "image/png": "png", "image/gif": "gif", "image/webp": "webp"}
 
 
-def process_session(jsonl_path: Path) -> dict | None:
+def process_claude_session(jsonl_path: Path) -> dict | None:
     turns = []
     first_ts = None
     last_ts = None
@@ -217,6 +235,91 @@ def process_session(jsonl_path: Path) -> dict | None:
     }
 
 
+CODEX_ROLLOUT_ID_RE = re.compile(
+    r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
+)
+
+
+def codex_session_id(jsonl_path: Path) -> str:
+    match = CODEX_ROLLOUT_ID_RE.search(jsonl_path.stem)
+    if match:
+        return f"codex-{match.group(1).lower()}"
+    return f"codex-{jsonl_path.stem}"
+
+
+def process_codex_session(jsonl_path: Path) -> dict | None:
+    turns = []
+    first_ts = None
+    last_ts = None
+    cwd = None
+
+    with open(jsonl_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            ts = parse_timestamp(obj.get("timestamp"))
+            if ts:
+                if first_ts is None or ts < first_ts:
+                    first_ts = ts
+                if last_ts is None or ts > last_ts:
+                    last_ts = ts
+
+            payload = obj.get("payload", {})
+            if obj.get("type") == "session_meta":
+                meta = payload if isinstance(payload, dict) else {}
+                cwd = cwd or meta.get("cwd")
+                meta_ts = parse_timestamp(meta.get("timestamp"))
+                if meta_ts and (first_ts is None or meta_ts < first_ts):
+                    first_ts = meta_ts
+                continue
+
+            if obj.get("type") == "turn_context":
+                ctx = payload if isinstance(payload, dict) else {}
+                cwd = cwd or ctx.get("cwd")
+                continue
+
+            if obj.get("type") != "event_msg" or not isinstance(payload, dict):
+                continue
+
+            payload_type = payload.get("type")
+            if payload_type == "user_message":
+                text = (payload.get("message") or "").strip()
+                if text:
+                    turns.append({"role": "user", "text": text})
+            elif payload_type == "agent_message":
+                text = (payload.get("message") or "").strip()
+                if text:
+                    turns.append({"role": "assistant", "text": text})
+
+    if not turns:
+        return None
+
+    if not first_ts:
+        mtime = jsonl_path.stat().st_mtime
+        first_ts = last_ts = datetime.fromtimestamp(mtime)
+
+    first_user = next((t["text"] for t in turns if t["role"] == "user"), "")
+    last_user = next((t["text"] for t in reversed(turns) if t["role"] == "user"), "")
+
+    return {
+        "turns": turns,
+        "project": display_path(cwd),
+        "project_key": cwd or "",
+        "first_message": first_user[:300],
+        "last_message": last_user[:300],
+        "message_count": len(turns),
+        "started_at": first_ts.strftime("%Y-%m-%d %H:%M"),
+        "last_active": last_ts.strftime("%Y-%m-%d %H:%M"),
+        "has_images": False,
+    }
+
+
 def load_state() -> dict:
     if STATE_FILE.exists():
         with open(STATE_FILE, "r") as f:
@@ -229,7 +332,7 @@ def save_state(state: dict):
         json.dump(state, f)
 
 
-def collect_session_files(projects_dir: Path) -> list[tuple[str, Path]]:
+def collect_claude_session_files(projects_dir: Path) -> list[dict]:
     results = []
     if not projects_dir.exists():
         return results
@@ -238,13 +341,38 @@ def collect_session_files(projects_dir: Path) -> list[tuple[str, Path]]:
             continue
         for p in project_dir.iterdir():
             if p.suffix == ".jsonl" and p.is_file():
-                results.append((project_dir.name, p))
+                results.append({
+                    "source": "claude",
+                    "project_key": project_dir.name,
+                    "session_id": p.stem,
+                    "path": p,
+                })
     return results
+
+
+def collect_codex_session_files(sessions_dir: Path | None) -> list[dict]:
+    results = []
+    if not sessions_dir or not sessions_dir.exists():
+        return results
+    for p in sessions_dir.rglob("*.jsonl"):
+        if p.is_file():
+            results.append({
+                "source": "codex",
+                "project_key": "",
+                "session_id": codex_session_id(p),
+                "path": p,
+            })
+    return results
+
+
+def collect_session_files(projects_dir: Path, codex_sessions_dir: Path | None) -> list[dict]:
+    return collect_claude_session_files(projects_dir) + collect_codex_session_files(codex_sessions_dir)
 
 
 def run_digest(force: bool = False):
     config = load_config()
     _, projects_dir = get_paths(config)
+    codex_sessions_dir = get_codex_sessions_dir(config)
     category_rules = build_category_rules(config)
     default_category = config.get("default_category", "其他")
 
@@ -260,7 +388,7 @@ def run_digest(force: bool = False):
             for item in json.load(f):
                 existing_index[item["session_id"]] = item
 
-    files = collect_session_files(projects_dir)
+    files = collect_session_files(projects_dir, codex_sessions_dir)
     print(f"掃描到 {len(files)} 個 session 檔案")
 
     index = []
@@ -268,8 +396,11 @@ def run_digest(force: bool = False):
     skipped = 0
     errors = 0
 
-    for project_dirname, jsonl_path in files:
-        session_id = jsonl_path.stem
+    for item in files:
+        source = item["source"]
+        project_key = item["project_key"]
+        session_id = item["session_id"]
+        jsonl_path = item["path"]
         file_size = jsonl_path.stat().st_size
         state_key = str(jsonl_path)
 
@@ -280,7 +411,10 @@ def run_digest(force: bool = False):
                 continue
 
         try:
-            result = process_session(jsonl_path)
+            if source == "claude":
+                result = process_claude_session(jsonl_path)
+            else:
+                result = process_codex_session(jsonl_path)
         except Exception as e:
             print(f"  錯誤: {jsonl_path.name} - {e}")
             errors += 1
@@ -295,11 +429,18 @@ def run_digest(force: bool = False):
         with open(detail_file, "w", encoding="utf-8") as f:
             json.dump(result["turns"], f, ensure_ascii=False, indent=2)
 
-        project_name = decode_project_path(project_dirname)
+        if source == "claude":
+            project_name = decode_project_path(project_key)
+            category_key = project_key
+        else:
+            project_name = result.get("project", "?")
+            category_key = result.get("project_key", project_name)
+
         entry = {
             "session_id": session_id,
+            "source": source,
             "project": project_name,
-            "category": categorize(project_dirname, category_rules, default_category),
+            "category": categorize(category_key, category_rules, default_category),
             "started_at": result["started_at"],
             "last_active": result["last_active"],
             "first_message": result["first_message"],
