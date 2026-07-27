@@ -453,6 +453,18 @@ def run_digest(force: bool = False):
         state[state_key] = file_size
         processed += 1
 
+    # 只新增、不砍：來源 jsonl 已消失、但蒸餾檔還在的舊條目，保留在清單上
+    seen = {e["session_id"] for e in index}
+    kept = 0
+    for sid, old_entry in existing_index.items():
+        if sid in seen:
+            continue
+        if (sessions_out / f"{sid}.json").exists():
+            index.append(old_entry)
+            kept += 1
+    if kept:
+        print(f"保留 {kept} 個來源已刪除、但仍有蒸餾檔的 session")
+
     index.sort(key=lambda x: x["started_at"], reverse=True)
 
     with open(index_file, "w", encoding="utf-8") as f:
@@ -466,14 +478,32 @@ def run_digest(force: bool = False):
     return index
 
 
+class DigestHandler(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".json": "application/json"}
+
+    def do_POST(self):
+        if self.path.rstrip("/") != "/api/digest":
+            self.send_error(404)
+            return
+        try:
+            index = run_digest()
+            body = json.dumps({"ok": True, "count": len(index)}).encode("utf-8")
+            self.send_response(200)
+        except Exception as e:
+            body = json.dumps({"ok": False, "error": str(e)}).encode("utf-8")
+            self.send_response(500)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
 def serve(port: int = None):
     if port is None:
         config = load_config()
         port = config.get("port", 8919)
     os.chdir(OUTPUT_DIR)
-    handler = http.server.SimpleHTTPRequestHandler
-    handler.extensions_map.update({".json": "application/json"})
-    server = http.server.HTTPServer(("127.0.0.1", port), handler)
+    server = http.server.HTTPServer(("127.0.0.1", port), DigestHandler)
     url = f"http://127.0.0.1:{port}/prototype.html"
     print(f"啟動 server: {url}")
     webbrowser.open(url)

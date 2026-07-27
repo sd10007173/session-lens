@@ -7,7 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366f1'/%3E%3Cstop offset='1' stop-color='%23a855f7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ccircle cx='28' cy='28' r='13' fill='none' stroke='%23fff' stroke-width='5'/%3E%3Cline x1='38' y1='38' x2='50' y2='50' stroke='%23fff' stroke-width='6' stroke-linecap='round'/%3E%3Cline x1='23' y1='25' x2='33' y2='25' stroke='%23fff' stroke-width='3' stroke-linecap='round' opacity='.9'/%3E%3Cline x1='23' y1='32' x2='29' y2='32' stroke='%23fff' stroke-width='3' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 24px; }
   h1 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
   .stats { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; color: #666; }
   .stats span { background: #fff; padding: 6px 12px; border-radius: 6px; border: 1px solid #e0e0e0; }
@@ -26,8 +26,12 @@
   thead th { text-align: left; padding: 10px 14px; font-size: 12px; font-weight: 600; color: #666; background: #fafafa; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
   thead th.sortable { cursor: pointer; user-select: none; }
   thead th.sortable:hover { background: #f0f0f0; }
-  .sort-arrow { font-size: 10px; color: #ccc; margin-left: 3px; }
-  .sort-arrow.active { color: #1a73e8; }
+  .sort-arrow { display: inline-block; width: 8px; height: 14px; margin-left: 5px; position: relative; vertical-align: -3px; }
+  .sort-arrow::before, .sort-arrow::after { content: ''; position: absolute; left: 0; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; }
+  .sort-arrow::before { top: 1px; border-bottom: 4px solid #ccc; }
+  .sort-arrow::after { bottom: 1px; border-top: 4px solid #ccc; }
+  .sort-arrow.asc::before { border-bottom-color: #1a73e8; }
+  .sort-arrow.desc::after { border-top-color: #1a73e8; }
   tbody tr { cursor: pointer; transition: background 0.1s; }
   tbody tr:hover { background: #f7f9fc; }
   tbody tr.expanded { background: #f0f4fa; }
@@ -67,7 +71,7 @@
 
   .empty { text-align: center; padding: 40px; color: #999; font-size: 14px; }
   .session-id { font-size: 11px; color: #aaa; font-family: "SF Mono", Menlo, monospace; white-space: nowrap; }
-  .id-col { font-family: "SF Mono", Menlo, monospace; font-size: 11px; color: #888; white-space: nowrap; }
+  .id-col { font-family: "SF Mono", Menlo, monospace; font-size: 11px; color: #888; white-space: nowrap; user-select: text; cursor: text; }
 </style>
 </head>
 <body>
@@ -101,15 +105,18 @@
     <input type="text" id="searchInput" placeholder="搜尋訊息內容..." style="width:200px">
   </div>
   <button class="btn-reset" onclick="resetFilters()">重設</button>
+  <button class="btn-reset" id="rescanBtn" onclick="rescan()">重新掃描</button>
+  <span id="rescanStatus" style="font-size:12px;color:#888"></span>
 </div>
 
 <table>
   <thead>
     <tr>
-      <th class="sortable" onclick="setSort('started_at')">開始 <span class="sort-arrow" id="arrow-started_at">▼</span></th>
-      <th class="sortable" onclick="setSort('last_active')">最後活動 <span class="sort-arrow" id="arrow-last_active"></span></th>
+      <th class="sortable" onclick="setSort('started_at')">開始<span class="sort-arrow" id="arrow-started_at"></span></th>
+      <th class="sortable" onclick="setSort('last_active')">最後活動<span class="sort-arrow" id="arrow-last_active"></span></th>
       <th>專案</th>
       <th>分類</th>
+      <th>來源</th>
       <th>第一個提示詞</th>
       <th>最後一個提示詞</th>
       <th style="text-align:right">訊息數</th>
@@ -251,13 +258,8 @@ function render() {
   ['started_at', 'last_active'].forEach(k => {
     const el = document.getElementById('arrow-' + k);
     if (!el) return;
-    if (k === sortKey) {
-      el.textContent = sortDir === 'desc' ? '▼' : '▲';
-      el.classList.add('active');
-    } else {
-      el.textContent = '';
-      el.classList.remove('active');
-    }
+    el.classList.remove('asc', 'desc');
+    if (k === sortKey) el.classList.add(sortDir);
   });
   const tbody = document.getElementById('tbody');
 
@@ -270,7 +272,7 @@ function render() {
   `;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty">沒有符合條件的 session</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">沒有符合條件的 session</td></tr>';
     return;
   }
 
@@ -278,21 +280,21 @@ function render() {
   filtered.forEach(s => {
     const isExpanded = expandedId === s.session_id;
     const lastMsg = s.last_message || '';
-    const idShort = s.session_id.slice(0, 8);
     const lastActive = (s.last_active || '').slice(0, 16);
     html += `<tr class="${isExpanded ? 'expanded' : ''}" onclick="toggleDetail('${s.session_id}')">
       <td class="date-col">${s.started_at.slice(0, 16)}</td>
       <td class="date-col">${lastActive}</td>
       <td>${s.project}</td>
       <td><span class="badge ${categoryClass(s.category)}">${escHtml(s.category)}</span></td>
+      <td>${s.source === 'codex' ? 'Codex' : 'Claude'}</td>
       <td class="first-msg" title="${escHtml(s.first_message)}">${escHtml(s.first_message)}</td>
       <td class="last-msg" title="${escHtml(lastMsg)}">${escHtml(lastMsg)}</td>
       <td class="num-col">${s.message_count}</td>
       <td class="num-col">${s.filtered_size_kb} KB</td>
-      <td class="id-col" title="${escHtml(s.session_id)}">${idShort}</td>
+      <td class="id-col" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">${escHtml(s.session_id)}</td>
     </tr>`;
     if (isExpanded) {
-      html += `<tr class="detail-row"><td colspan="9"><div class="detail-content" id="detail-${s.session_id}">載入中...</div></td></tr>`;
+      html += `<tr class="detail-row"><td colspan="10"><div class="detail-content" id="detail-${s.session_id}">載入中...</div></td></tr>`;
     }
   });
   tbody.innerHTML = html;
@@ -377,6 +379,24 @@ function openLightbox(src) {
   overlay.onclick = close;
   document.addEventListener('keydown', escHandler);
   document.body.appendChild(overlay);
+}
+
+async function rescan() {
+  const btn = document.getElementById('rescanBtn');
+  const status = document.getElementById('rescanStatus');
+  btn.disabled = true;
+  status.textContent = '掃描中…';
+  try {
+    const resp = await fetch('./api/digest', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) throw new Error(data.error || resp.statusText);
+    await loadData();
+    status.textContent = `完成，共 ${data.count} 個 session`;
+  } catch (e) {
+    status.textContent = '失敗：' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function resetFilters() {
