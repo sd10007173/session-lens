@@ -1,11 +1,13 @@
 {
   "claude_dir": "~/.claude",
   "codex_dir": "~/.codex",
+  "projects": [],
   "categories": {
     "Work": ["my-company", "work-project"],
     "Side Project": ["side-project", "hobby"],
     "Learning": ["tutorial", "course"]
   },
   "default_category": "Other",
-  "port": 8919
+  "port": 8919,
+  "poll_interval_seconds": 10
 }

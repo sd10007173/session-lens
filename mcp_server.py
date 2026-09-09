@@ -7,12 +7,13 @@ Session Lens MCP Server
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(os.environ.get("SESSION_LENS_DATA_DIR", str(Path(__file__).parent))).expanduser().resolve()
 INDEX_FILE = BASE_DIR / "index.json"
 SESSIONS_DIR = BASE_DIR / "sessions"
 

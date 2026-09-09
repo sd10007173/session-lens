@@ -6,109 +6,175 @@
 <title>Session Lens</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366f1'/%3E%3Cstop offset='1' stop-color='%23a855f7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ccircle cx='28' cy='28' r='13' fill='none' stroke='%23fff' stroke-width='5'/%3E%3Cline x1='38' y1='38' x2='50' y2='50' stroke='%23fff' stroke-width='6' stroke-linecap='round'/%3E%3Cline x1='23' y1='25' x2='33' y2='25' stroke='%23fff' stroke-width='3' stroke-linecap='round' opacity='.9'/%3E%3Cline x1='23' y1='32' x2='29' y2='32' stroke='%23fff' stroke-width='3' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 24px; }
-  h1 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
-  .stats { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; color: #666; }
-  .stats span { background: #fff; padding: 6px 12px; border-radius: 6px; border: 1px solid #e0e0e0; }
-  .stats strong { color: #1a1a1a; }
-
-  .filters { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
-  .filters label { font-size: 13px; color: #666; }
-  .filters input, .filters select { font-size: 13px; padding: 6px 10px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; outline: none; }
-  .filters input:focus, .filters select:focus { border-color: #4a90d9; }
-  .filters input[type="date"] { width: 140px; }
-  .filter-group { display: flex; align-items: center; gap: 6px; }
-  .btn-reset { font-size: 12px; padding: 6px 12px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; cursor: pointer; color: #666; }
-  .btn-reset:hover { background: #f0f0f0; }
-
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
-  thead th { text-align: left; padding: 10px 14px; font-size: 12px; font-weight: 600; color: #666; background: #fafafa; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
-  thead th.sortable { cursor: pointer; user-select: none; }
-  thead th.sortable:hover { background: #f0f0f0; }
-  .sort-arrow { display: inline-block; width: 8px; height: 14px; margin-left: 5px; position: relative; vertical-align: -3px; }
-  .sort-arrow::before, .sort-arrow::after { content: ''; position: absolute; left: 0; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; }
-  .sort-arrow::before { top: 1px; border-bottom: 4px solid #ccc; }
-  .sort-arrow::after { bottom: 1px; border-top: 4px solid #ccc; }
-  .sort-arrow.asc::before { border-bottom-color: #1a73e8; }
-  .sort-arrow.desc::after { border-top-color: #1a73e8; }
-  tbody tr { cursor: pointer; transition: background 0.1s; }
-  tbody tr:hover { background: #f7f9fc; }
-  tbody tr.expanded { background: #f0f4fa; }
-  tbody td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-  tbody tr:last-child td { border-bottom: none; }
-
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; white-space: nowrap; }
-  .badge-c0 { background: #e8f0fe; color: #1a73e8; }
-  .badge-c1 { background: #fef3e0; color: #e67e00; }
-  .badge-c2 { background: #e6f4ea; color: #1e8e3e; }
-  .badge-c3 { background: #f3e8fd; color: #8b3eba; }
-  .badge-c4 { background: #fde8f0; color: #c4366f; }
-  .badge-c5 { background: #e0f3f7; color: #00789c; }
-  .badge-default { background: #f0f0f0; color: #666; }
-
-  .first-msg { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .last-msg { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #555; }
-  .date-col { white-space: nowrap; color: #666; }
-  .num-col { text-align: right; color: #888; font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-  .detail-row td { padding: 0 !important; border-bottom: 1px solid #e0e0e0 !important; }
-  .detail-content { padding: 16px 20px; background: #fafbfc; max-height: 500px; overflow-y: auto; }
-  .detail-content .turn { margin-bottom: 12px; }
-  .detail-content .turn:last-child { margin-bottom: 0; }
-  .detail-content .turn-user { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 14px; }
-  .detail-content .turn-assistant { background: #f0f4fa; border: 1px solid #d8e2f0; border-radius: 8px; padding: 10px 14px; }
-  .detail-content .turn-label { font-size: 11px; font-weight: 600; color: #888; margin-bottom: 4px; text-transform: uppercase; }
-  .detail-content .turn-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-  .detail-content .resume-hint { margin-top: 12px; font-size: 12px; color: #888; }
-  .detail-content code { background: #e8e8e8; padding: 2px 6px; border-radius: 3px; font-size: 12px; font-family: "SF Mono", Menlo, monospace; }
-  .turn-images { margin-top: 8px; }
-  .show-imgs-btn { font-size: 12px; padding: 4px 10px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; cursor: pointer; color: #444; }
-  .show-imgs-btn:hover { background: #f0f0f0; }
-  .turn-img { max-width: 100%; max-height: 400px; border-radius: 6px; margin-top: 8px; display: block; border: 1px solid #e0e0e0; cursor: zoom-in; }
-  .lightbox-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
-  .lightbox-overlay img { max-width: 95vw; max-height: 95vh; object-fit: contain; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-
-  .empty { text-align: center; padding: 40px; color: #999; font-size: 14px; }
-  .session-id { font-size: 11px; color: #aaa; font-family: "SF Mono", Menlo, monospace; white-space: nowrap; }
-  .id-col { font-family: "SF Mono", Menlo, monospace; font-size: 11px; color: #888; white-space: nowrap; user-select: text; cursor: text; }
+  :root { --paper:#fff; --ink:#253244; --muted:#667085; --line:#e5e9ef; --wash:#f6f8fb; --accent:#245fc0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"PingFang TC","Noto Sans TC",-apple-system,sans-serif; background:var(--paper); color:var(--ink); padding:32px; font-size:14px; line-height:1.5; }
+  .page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:8px; }
+  h1 {font-family:"Avenir Next","PingFang TC",sans-serif;font-size:24px; font-weight:650; letter-spacing:-.7px;}
+  button,input,select,textarea {font:inherit;}
+  button {font-size:13px;padding:8px 12px;border:1px solid #ccd4df;border-radius:6px;background:var(--paper);color:var(--ink);cursor:pointer;white-space:nowrap;}
+  button:hover {background:var(--wash);border-color:#aab7c8;}
+  button:disabled {opacity:.5;cursor:wait;}
+  :is(button,input,select,textarea,summary,[tabindex]):focus-visible {outline:2px solid var(--accent);outline-offset:3px;}
+  .btn-reset {color:var(--muted);}
+  .page-header .btn-reset {border-color:transparent;background:transparent;}
+  .page-header .btn-reset:hover {background:var(--wash);}
+  .stats {font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.6;}
+  .filters {display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:20px;}
+  .filter-group {display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .filters label {font-size:12px;color:var(--muted);}
+  .filters input,.filters select {height:36px;font-size:13px;padding:6px 10px;border:1px solid #ccd4df;border-radius:6px;background:var(--paper);color:var(--ink);min-width:0;}
+  .filters input[type="date"] {width:145px;}
+  .filters select {max-width:240px;min-width:110px;}
+  .search-filter {flex:1;min-width:200px;max-width:340px;}
+  #searchInput {width:100%;}
+  #rescanStatus {color:var(--muted);font-size:12px;align-self:center;}
+  .session-table {width:100%;overflow:auto;border-top:1px solid var(--line);}
+  table {width:100%;min-width:1250px;border-collapse:collapse;table-layout:fixed;}
+  thead th {text-align:left;padding:13px 12px;font-size:12px;font-weight:500;color:var(--muted);background:var(--wash);border-bottom:1px solid var(--line);white-space:nowrap;}
+  thead th:nth-child(1),thead th:nth-child(2) {width:152px;}
+  thead th:nth-child(3) {width:180px;}
+  thead th:nth-child(4) {width:100px;}
+  thead th:nth-child(5) {width:70px;}
+  thead th:nth-child(8) {width:65px;}
+  thead th:nth-child(9) {width:75px;}
+  thead th:nth-child(10) {width:120px;}
+  th.sortable {cursor:pointer;user-select:none;}
+  th.sortable:hover {color:var(--ink);}
+  .sort-arrow {display:inline-block;width:8px;height:14px;margin-left:5px;position:relative;vertical-align:-3px;}
+  .sort-arrow::before,.sort-arrow::after {content:'';position:absolute;left:0;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;}
+  .sort-arrow::before {top:2px;border-bottom:3px solid #c4ccd7;}
+  .sort-arrow::after {bottom:2px;border-top:3px solid #c4ccd7;}
+  .sort-arrow.asc::before {border-bottom-color:var(--accent);}
+  .sort-arrow.desc::after {border-top-color:var(--accent);}
+  tbody tr {cursor:pointer;}
+  tbody tr:hover {background:var(--wash);}
+  tbody tr.expanded {background:#eef4fd;}
+  tbody td {padding:14px 12px;font-size:13px;border-bottom:1px solid var(--line);vertical-align:top;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .badge {font-size:12px;color:var(--muted);white-space:nowrap;}
+  .first-msg,.last-msg {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .last-msg,.date-col {color:var(--muted);}
+  .num-col {text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .id-col {font-size:12px;color:var(--muted);user-select:text;cursor:text;}
+  .detail-row td {padding:0;white-space:normal;}
+  .detail-content {padding:24px 32px;background:var(--wash);max-height:560px;overflow-y:auto;}
+  .detail-content .turn {max-width:920px;margin-bottom:24px;}
+  .detail-content .turn:last-child {margin-bottom:0;}
+  .turn-label {font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;}
+  .turn-user,.turn-assistant {padding-left:14px;border-left:2px solid #ccd4df;}
+  .turn-user {border-left-color:var(--accent);}
+  .turn-text {font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;}
+  .resume-hint {margin-top:20px;font-size:12px;color:var(--muted);}
+  .detail-content code {font-family:Menlo,monospace;font-size:12px;background:#e9edf3;padding:2px 6px;border-radius:3px;}
+  .turn-images {margin-top:8px;}
+  .show-imgs-btn {font-size:12px;}
+  .turn-img {max-width:100%;max-height:400px;border-radius:6px;margin-top:8px;display:block;cursor:zoom-in;}
+  .lightbox-overlay {position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;}
+  .lightbox-overlay img {max-width:95vw;max-height:95vh;object-fit:contain;}
+  .empty {text-align:center;padding:48px;color:var(--muted);font-size:14px;}
+  dialog {margin:auto;border:0;border-radius:12px;padding:28px 32px;width:min(1080px,calc(100vw - 48px));max-height:92vh;color:var(--ink);background:var(--paper);box-shadow:0 24px 80px #25324430;}
+  dialog::backdrop {background:rgba(37,50,68,.35);}
+  .dialog-header {display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+  .dialog-header h2 {font-size:20px;font-weight:600;}
+  .dialog-header button {border-color:transparent;}
+  dialog p,dialog summary {font-size:13px;color:var(--muted);line-height:1.6;}
+  dialog input,dialog textarea {display:block;width:100%;font-size:14px;padding:10px 12px;border:1px solid #ccd4df;border-radius:6px;margin-top:8px;}
+  dialog label {display:block;font-size:13px;margin-bottom:18px;}
+  .project-columns,#projectEditor fieldset {display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,2.6fr) 52px;gap:12px;align-items:start;}
+  .project-columns {color:var(--muted);font-size:12px;padding:0 0 10px;}
+  .project-columns[hidden] {display:none;}
+  #projectEditor fieldset {min-width:0;border:0;border-bottom:1px solid var(--line);padding:12px 0;margin:0;}
+  #projectEditor input,#projectEditor textarea {margin:0;min-width:0;height:44px;line-height:22px;padding:10px 12px;}
+  #projectEditor textarea {resize:vertical;max-height:160px;}
+  #projectEditor .remove-project {margin-top:3px;padding:8px 6px;border-color:transparent;color:var(--muted);}
+  #projectEditor .remove-project:hover {background:#fff1f0;color:#a32621;}
+  .add-project {margin-top:14px;color:var(--accent);border-color:transparent;}
+  .add-project:hover {background:var(--wash);}
+  .dialog-footer {display:flex;justify-content:flex-end;gap:8px;margin-top:24px;}
+  .primary {background:var(--accent);color:white;border-color:var(--accent);}
+  .primary:hover {background:#1c4d9d;color:white;}
+  #projectEmpty {padding:12px 0 24px;color:var(--muted);}
+  #ingestedPaths {margin-top:24px;border-top:1px solid var(--line);padding-top:20px;}
+  #ingestedPaths summary {cursor:pointer;color:var(--ink);}
+  .path-search {margin:20px 0 0;max-width:420px;}
+  #discoveredPaths {max-height:50vh;overflow:auto;margin-top:16px;}
+  .path-row {display:grid;grid-template-columns:minmax(0,1fr) 100px 82px;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .path-row code {font-family:inherit;overflow-wrap:anywhere;font-size:13px;user-select:all;}
+  .path-count {text-align:right;font-variant-numeric:tabular-nums;font-size:13px;}
+  .path-row button {border-color:transparent;color:var(--accent);}
+  .path-header {position:sticky;top:0;background:var(--paper);color:var(--muted);font-size:12px;font-weight:500;z-index:1;}
+  .path-header span:last-child {text-align:center;}
+  [role="status"] {font-size:13px;line-height:1.5;}
+  @media (max-width:640px) {
+    body {padding:20px 16px;}
+    .stats {margin-bottom:20px;}
+    .filters {gap:12px 10px;}
+    .filter-group {flex:1 1 140px;}
+    .filters select,.filters input[type="date"] {width:100%;max-width:100%;}
+    .search-filter {flex-basis:100%;max-width:none;}
+    dialog {width:calc(100vw - 24px);padding:20px;}
+    .path-row {grid-template-columns:minmax(0,1fr) 62px 60px;gap:8px;}
+    .path-row button {padding:8px 4px;}
+    .path-row code,.path-count {font-size:12px;}
+    .detail-content {padding:20px;}
+    .project-columns,#projectEditor fieldset {grid-template-columns:minmax(70px,1fr) minmax(0,1.8fr) 38px;gap:8px;}
+    #projectEditor input,#projectEditor textarea {padding:10px 8px;font-size:13px;}
+  }
 </style>
 </head>
 <body>
 
-<h1>Session Lens</h1>
-
-<div class="stats" id="stats"></div>
+<header class="page-header">
+  <h1>Session Lens</h1>
+  <button class="btn-reset" onclick="openSettings()">設定專案</button>
+</header>
+<dialog id="settings" aria-labelledby="projectsTitle">
+  <div class="dialog-header"><h2 id="projectsTitle">設定專案</h2><button aria-label="關閉專案設定" onclick="document.getElementById('settings').close()">✕</button></div>
+  <div class="project-columns" id="projectColumns" hidden><span>專案名稱</span><span>專案路徑</span><span></span></div>
+  <div id="projectEditor"></div>
+  <p id="projectEmpty">尚未設定專案</p>
+  <button class="add-project" onclick="addProject()">＋ 新增專案</button>
+  <details id="ingestedPaths">
+    <summary>查看已匯入的專案路徑</summary>
+    <label class="path-search">搜尋專案路徑<input id="pathSearch" type="search" placeholder="例如 CoinKarma" autocomplete="off" oninput="renderPaths()"></label>
+    <div id="discoveredPaths" aria-live="polite"></div>
+  </details>
+  <p id="settingsStatus" role="status"></p>
+  <div class="dialog-footer"><button onclick="document.getElementById('settings').close()">取消</button><button class="primary" id="saveSettings" onclick="saveSettings()">儲存</button></div>
+</dialog>
+<p class="stats" id="stats" role="status"></p>
 
 <div class="filters">
   <div class="filter-group">
-    <label>從</label>
+    <label for="dateFrom">開始日期</label>
     <input type="date" id="dateFrom">
   </div>
   <div class="filter-group">
-    <label>到</label>
+    <label for="dateTo">結束日期</label>
     <input type="date" id="dateTo">
   </div>
   <div class="filter-group">
-    <label>分類</label>
+    <label for="categoryFilter">分類</label>
     <select id="categoryFilter">
       <option value="">全部</option>
     </select>
   </div>
   <div class="filter-group">
-    <label>專案</label>
+    <label for="projectFilter">專案</label>
     <select id="projectFilter">
       <option value="">全部</option>
     </select>
   </div>
-  <div class="filter-group">
-    <input type="text" id="searchInput" placeholder="搜尋訊息內容..." style="width:200px">
+  <div class="filter-group search-filter">
+    <label for="searchInput">搜尋對話</label>
+    <input type="search" id="searchInput" placeholder="搜尋第一則或最後一則提示詞">
   </div>
   <button class="btn-reset" onclick="resetFilters()">重設</button>
   <button class="btn-reset" id="rescanBtn" onclick="rescan()">重新掃描</button>
-  <span id="rescanStatus" style="font-size:12px;color:#888"></span>
+  <span id="rescanStatus" role="status"></span>
 </div>
 
+<div class="session-table" role="region" aria-label="Session 列表" tabindex="0">
 <table>
   <thead>
     <tr>
@@ -126,47 +192,113 @@
   </thead>
   <tbody id="tbody"></tbody>
 </table>
+</div>
 
 <script>
-const BADGE_PALETTE = ['badge-c0', 'badge-c1', 'badge-c2', 'badge-c3', 'badge-c4', 'badge-c5'];
-const DEFAULT_CATEGORY_NAMES = new Set(['其他', '其它', 'Other', 'Others']);
-function categoryClass(cat) {
-  if (!cat || DEFAULT_CATEGORY_NAMES.has(cat)) return 'badge-default';
-  let h = 0;
-  for (let i = 0; i < cat.length; i++) h = (h * 31 + cat.charCodeAt(i)) | 0;
-  return BADGE_PALETTE[Math.abs(h) % BADGE_PALETTE.length];
+let currentConfig = {};
+let projectDraft = [];
+let importedPaths = [];
+async function api(path, body) {
+  const response = await fetch(path, body === undefined ? {cache:'no-store'} : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || '讀取失敗');
+  return data;
 }
+function showPaths(index) {
+  const counts = new Map();
+  index.forEach(session => {
+    const path = session.project_key || session.original_project || session.project || '未知路徑';
+    counts.set(path, (counts.get(path) || 0) + 1);
+  });
+  importedPaths = [...counts].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
+  document.getElementById('pathSearch').value = '';
+  renderPaths();
+}
+function renderPaths() {
+  const paths = document.getElementById('discoveredPaths');
+  paths.replaceChildren();
+  const query = document.getElementById('pathSearch').value.trim().toLocaleLowerCase();
+  const matching = importedPaths.filter(([path]) => path.toLocaleLowerCase().includes(query));
+  if (!matching.length) {
+    const empty = document.createElement('p');empty.className='empty';
+    empty.textContent=importedPaths.length ? '沒有符合的路徑，請換個關鍵字或清除搜尋。' : '尚無已匯入的路徑，請先重新掃描。';
+    paths.append(empty);return;
+  }
+  const header = document.createElement('div');header.className = 'path-row path-header';
+  ['專案路徑','Session 數','操作'].forEach((label, i) => {
+    const cell=document.createElement('span');cell.textContent=label;if(i===1)cell.className='path-count';header.append(cell);
+  });
+  paths.append(header);
+  matching.forEach(([path,count]) => {
+    const row = document.createElement('div'); row.className = 'path-row';
+    const text = document.createElement('code'); text.textContent = path;
+    const total = document.createElement('span');total.className='path-count';total.textContent=count.toLocaleString();
+    const button = document.createElement('button'); button.textContent = '複製';
+    button.onclick = async () => {
+      try {await navigator.clipboard.writeText(path);button.textContent='已複製';}
+      catch {button.textContent='請手動複製';}
+    };
+    row.append(text, total, button); paths.append(row);
+  });
+}
+async function openSettings() {
+  try {
+    const data = await api('/api/config');
+    currentConfig = data.config;
+    projectDraft = structuredClone(currentConfig.projects || []);
+    showPaths(data.first_run ? [] : await api('/index.json'));
+    document.getElementById('ingestedPaths').open = false;
+    document.getElementById('settingsStatus').textContent = '';
+    renderProjects();
+    document.getElementById('settings').showModal();
+  } catch (e) { document.getElementById('rescanStatus').textContent = e.message; }
+}
+function addProject() {
+  projectDraft.push({id:crypto.randomUUID(), name:'', category:currentConfig.default_category || '其他', paths:[]});
+  renderProjects();
+  document.querySelector('#projectEditor fieldset:last-child input').focus();
+}
+function renderProjects() {
+  const container = document.getElementById('projectEditor'); container.replaceChildren();
+  document.getElementById('projectEmpty').hidden = projectDraft.length > 0;
+  document.getElementById('projectColumns').hidden = projectDraft.length === 0;
+  projectDraft.forEach((project, index) => {
+    const row = document.createElement('fieldset');
+    [['name','專案名稱'],['paths','專案路徑']].forEach(([key,label]) => {
 
-// --- Mock data (will be replaced by index.json) ---
-const MOCK_DATA = [
-  { session_id: "a1b2c3d4-0001-4000-a000-000000000001", project: "acme-app/backend", category: "Work", started_at: "2026-04-25 14:30", last_active: "2026-04-25 16:20", first_message: "Help me add pagination to the /api/users endpoint", message_count: 24, filtered_size_kb: 48 },
-  { session_id: "a1b2c3d4-0002-4000-a000-000000000002", project: "acme-app/frontend", category: "Work", started_at: "2026-04-25 10:15", last_active: "2026-04-25 13:45", first_message: "The dashboard chart is rendering slowly, let's optimize it", message_count: 35, filtered_size_kb: 60 },
-  { session_id: "a1b2c3d4-0003-4000-a000-000000000003", project: "my-side-project", category: "Side Project", started_at: "2026-04-25 09:00", last_active: "2026-04-25 11:30", first_message: "Add dark mode support to the landing page", message_count: 45, filtered_size_kb: 85 },
-  { session_id: "a1b2c3d4-0004-4000-a000-000000000004", project: "acme-app/backend", category: "Work", started_at: "2026-04-24 16:00", last_active: "2026-04-24 18:30", first_message: "The cron job for daily reports sometimes misses entries", message_count: 31, filtered_size_kb: 55 },
-  { session_id: "a1b2c3d4-0005-4000-a000-000000000005", project: "rust-tutorial", category: "Learning", started_at: "2026-04-24 14:00", last_active: "2026-04-24 15:45", first_message: "Explain ownership and borrowing in Rust with examples", message_count: 28, filtered_size_kb: 42 },
-  { session_id: "a1b2c3d4-0006-4000-a000-000000000006", project: "home", category: "Other", started_at: "2026-04-24 09:00", last_active: "2026-04-24 09:30", first_message: "Help me write a meal plan for next week", message_count: 8, filtered_size_kb: 12 },
-  { session_id: "a1b2c3d4-0007-4000-a000-000000000007", project: "my-side-project", category: "Side Project", started_at: "2026-04-23 20:00", last_active: "2026-04-23 21:15", first_message: "Set up CI/CD pipeline with GitHub Actions", message_count: 15, filtered_size_kb: 22 },
-  { session_id: "a1b2c3d4-0008-4000-a000-000000000008", project: "acme-app/backend", category: "Work", started_at: "2026-04-23 10:00", last_active: "2026-04-23 12:30", first_message: "Refactor the auth middleware to support OAuth2", message_count: 52, filtered_size_kb: 95 },
-  { session_id: "a1b2c3d4-0009-4000-a000-000000000009", project: "ml-course", category: "Learning", started_at: "2026-04-22 14:00", last_active: "2026-04-22 17:30", first_message: "Walk me through building a simple neural network from scratch", message_count: 41, filtered_size_kb: 78 },
-  { session_id: "a1b2c3d4-0010-4000-a000-000000000010", project: "home", category: "Other", started_at: "2026-04-21 21:00", last_active: "2026-04-21 22:00", first_message: "Help me draft an email to my landlord about the lease renewal", message_count: 6, filtered_size_kb: 8 },
-];
-
-const MOCK_DETAILS = {
-  "a1b2c3d4-0001-4000-a000-000000000001": [
-    { role: "user", text: "Help me add pagination to the /api/users endpoint" },
-    { role: "assistant", text: "Added offset/limit pagination to the /api/users endpoint. The default page size is 20, max 100.\n\nAlso added Link headers for next/prev pages following RFC 5988." },
-    { role: "user", text: "Can you also add cursor-based pagination as an alternative?" },
-    { role: "assistant", text: "Done. The endpoint now supports both modes:\n- `?offset=20&limit=10` for offset pagination\n- `?cursor=abc123&limit=10` for cursor pagination\n\nCursor is based on the user's created_at timestamp + id for stable ordering." },
-  ],
-  "a1b2c3d4-0003-4000-a000-000000000003": [
-    { role: "user", text: "Add dark mode support to the landing page" },
-    { role: "assistant", text: "Added dark mode with CSS custom properties. It respects the user's system preference via `prefers-color-scheme` and also has a manual toggle button in the header.\n\nColors are defined in :root and [data-theme='dark'] selectors." },
-    { role: "user", text: "The toggle button needs to persist the user's choice" },
-    { role: "assistant", text: "Updated the toggle to save the preference in localStorage. On page load it checks:\n1. localStorage value first\n2. Falls back to system preference\n\nThe button icon switches between sun/moon accordingly." },
-  ]
-};
-
-// --- App state ---
+      const input = document.createElement(key === 'paths' ? 'textarea' : 'input');
+      input.value = key === 'paths' ? project.paths.join('\n') : project[key];
+      input.required = true;
+      input.setAttribute('aria-label', label);
+      if (key === 'name') input.placeholder = '例如 CoinKarma';
+      if (key === 'paths') {input.rows=Math.min(5,Math.max(1,project.paths.length));input.style.height=(22 * input.rows + 22)+'px';input.placeholder='貼上路徑，多個路徑請分行';}
+      input.oninput = () => {project[key] = key === 'paths' ? input.value.split('\n').map(p=>p.trim()).filter(Boolean) : input.value.trim();if(key === 'paths'){input.style.height='44px';input.style.height=Math.min(160,input.scrollHeight+2)+'px';}};
+      row.append(input);
+    });
+    const remove = document.createElement('button'); remove.textContent='刪除';remove.className='remove-project';
+    remove.onclick=()=>{projectDraft.splice(index,1);renderProjects();}; row.append(remove);container.append(row);
+  });
+}
+async function saveSettings() {
+  const status = document.getElementById('settingsStatus');
+  const button = document.getElementById('saveSettings');
+  for (const input of document.querySelectorAll('#projectEditor input, #projectEditor textarea')) {
+    if (!input.reportValidity()) return;
+  }
+  button.disabled=true;
+  try {
+    const config = {...currentConfig, projects:projectDraft};
+    await api('/api/config', config); currentConfig=config;
+    document.getElementById('settings').close();
+    document.getElementById('rescanStatus').textContent = '專案設定已儲存。';
+    try {await loadData();} catch {}
+  } catch(e) {status.textContent='儲存失敗：'+e.message;} finally {button.disabled=false;}
+}
+async function initialize() {
+  try {const data=await api('/api/config');currentConfig=data.config;if(data.first_run) await openSettings();else await loadData();}
+  catch(e) {document.getElementById('rescanStatus').textContent=e.message;}
+}
+// Session index
 let sessions = [];
 let expandedId = null;
 let sortKey = 'started_at';
@@ -184,14 +316,16 @@ function setSort(key) {
 
 async function loadData() {
   try {
-    const resp = await fetch('./index.json');
+    const resp = await fetch('./index.json', {cache:'no-store'});
     if (resp.ok) {
       sessions = await resp.json();
     } else {
-      sessions = MOCK_DATA;
+      throw new Error("索引讀取失敗，請確認設定並重新掃描");
     }
-  } catch {
-    sessions = MOCK_DATA;
+  } catch (e) {
+    sessions = [];
+    document.getElementById("rescanStatus").textContent = e.message;
+    throw e;
   }
   populateCategoryFilter();
   populateProjectFilter();
@@ -201,6 +335,7 @@ async function loadData() {
 function populateCategoryFilter() {
   const cats = [...new Set(sessions.map(s => s.category))].sort();
   const sel = document.getElementById('categoryFilter');
+  const previous = sel.value;
   sel.innerHTML = '<option value="">全部</option>';
   cats.forEach(c => {
     const opt = document.createElement('option');
@@ -208,11 +343,13 @@ function populateCategoryFilter() {
     opt.textContent = c;
     sel.appendChild(opt);
   });
+  if ([...sel.options].some(o=>o.value===previous)) sel.value=previous;
 }
 
 function populateProjectFilter() {
   const projects = [...new Set(sessions.map(s => s.project))].sort();
   const sel = document.getElementById('projectFilter');
+  const previous = sel.value;
   sel.innerHTML = '<option value="">全部</option>';
   projects.forEach(p => {
     const opt = document.createElement('option');
@@ -220,6 +357,7 @@ function populateProjectFilter() {
     opt.textContent = p;
     sel.appendChild(opt);
   });
+  if ([...sel.options].some(o=>o.value===previous)) sel.value=previous;
 }
 
 function getFilters() {
@@ -235,6 +373,7 @@ function getFilters() {
 function filterSessions() {
   const f = getFilters();
   return sessions.filter(s => {
+    if (currentConfig[(s.source || "claude") + "_dir"] === null) return false;
     const d = s.started_at.slice(0, 10);
     if (f.dateFrom && d < f.dateFrom) return false;
     if (f.dateTo && d > f.dateTo) return false;
@@ -266,10 +405,8 @@ function render() {
   // Stats
   const statsEl = document.getElementById('stats');
   const totalKb = filtered.reduce((a, s) => a + s.filtered_size_kb, 0);
-  statsEl.innerHTML = `
-    <span>顯示 <strong>${filtered.length}</strong> / ${sessions.length} 個 session</span>
-    <span>過濾後總大小 <strong>${totalKb >= 1024 ? (totalKb/1024).toFixed(1) + ' MB' : totalKb + ' KB'}</strong></span>
-  `;
+  const sizeLabel = totalKb >= 1024 ? (totalKb/1024).toFixed(1) + ' MB' : totalKb + ' KB';
+  statsEl.textContent = `共 ${sessions.length.toLocaleString()} 個 session，目前顯示 ${filtered.length.toLocaleString()} 個，過濾後大小 ${sizeLabel}。`;
 
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="10" class="empty">沒有符合條件的 session</td></tr>';
@@ -284,14 +421,14 @@ function render() {
     html += `<tr class="${isExpanded ? 'expanded' : ''}" onclick="toggleDetail('${s.session_id}')">
       <td class="date-col">${s.started_at.slice(0, 16)}</td>
       <td class="date-col">${lastActive}</td>
-      <td>${s.project}</td>
-      <td><span class="badge ${categoryClass(s.category)}">${escHtml(s.category)}</span></td>
+      <td title="${escHtml(s.project)}">${escHtml(s.project)}</td>
+      <td><span class="badge">${escHtml(s.category)}</span></td>
       <td>${s.source === 'codex' ? 'Codex' : 'Claude'}</td>
       <td class="first-msg" title="${escHtml(s.first_message)}">${escHtml(s.first_message)}</td>
       <td class="last-msg" title="${escHtml(lastMsg)}">${escHtml(lastMsg)}</td>
       <td class="num-col">${s.message_count}</td>
       <td class="num-col">${s.filtered_size_kb} KB</td>
-      <td class="id-col" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">${escHtml(s.session_id)}</td>
+      <td class="id-col" title="${escHtml(s.session_id)}" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">${escHtml(s.session_id)}</td>
     </tr>`;
     if (isExpanded) {
       html += `<tr class="detail-row"><td colspan="10"><div class="detail-content" id="detail-${s.session_id}">載入中...</div></td></tr>`;
@@ -317,12 +454,9 @@ async function loadDetail(id) {
 
   // Try loading from file first
   try {
-    const resp = await fetch(`./sessions/${id}.json`);
+    const resp = await fetch(`./sessions/${id}.json`, {cache:"no-store"});
     if (resp.ok) turns = await resp.json();
   } catch {}
-
-  // Fallback to mock
-  if (!turns) turns = MOCK_DETAILS[id] || null;
 
   if (!turns) {
     container.innerHTML = '<div style="color:#999;font-size:13px">尚未產生過濾資料。請先執行 Python 腳本。</div>';
@@ -342,7 +476,7 @@ async function loadDetail(id) {
     }
     return `
       <div class="turn">
-        <div class="turn-label">${t.role === 'user' ? '👤 我' : '🤖 ' + agentName}</div>
+        <div class="turn-label">${t.role === 'user' ? '我' : agentName}</div>
         <div class="${t.role === 'user' ? 'turn-user' : 'turn-assistant'}">
           <div class="turn-text">${escHtml(t.text)}</div>
           ${imgHtml}
@@ -427,7 +561,7 @@ weekAgo.setDate(weekAgo.getDate() - 7);
 document.getElementById('dateTo').value = today.toISOString().slice(0, 10);
 document.getElementById('dateFrom').value = weekAgo.toISOString().slice(0, 10);
 
-loadData();
+initialize();
 </script>
 </body>
 </html>
